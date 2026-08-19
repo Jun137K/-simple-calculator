@@ -3,97 +3,214 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>三角関数測定</title>
+<title>フランジ穴間計算</title>
 
 <style>
+* {
+  box-sizing: border-box;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  margin: 0;
   background: #f2f2f7;
-  padding: 20px;
+  color: #111;
+  font-family: -apple-system, BlinkMacSystemFont, "Noto Sans JP", sans-serif;
+}
+
+main {
+  max-width: 520px;
+  margin: auto;
+  padding: 18px 16px 35px;
 }
 
 h1 {
   text-align: center;
+  font-size: 25px;
+  margin: 8px 0 4px;
 }
 
-.box {
+.sub {
+  text-align: center;
+  color: #666;
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+
+.card {
   background: white;
-  padding: 20px;
-  margin-bottom: 20px;
-  border-radius: 15px;
+  border-radius: 18px;
+  padding: 18px;
+  margin: 12px 0;
+  box-shadow: 0 2px 10px rgba(0,0,0,.07);
+}
+
+label {
+  display: block;
+  font-weight: 700;
+  margin: 13px 0 6px;
 }
 
 input {
   width: 100%;
-  box-sizing: border-box;
+  padding: 13px;
   font-size: 22px;
-  padding: 12px;
-  margin: 8px 0 15px;
-  border-radius: 10px;
   border: 1px solid #ccc;
+  border-radius: 11px;
 }
 
 button {
   width: 100%;
   padding: 15px;
-  font-size: 18px;
-  border: none;
-  border-radius: 10px;
-  background: #007aff;
+  margin-top: 18px;
+  border: 0;
+  border-radius: 12px;
+  background: #0b5cff;
   color: white;
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .result {
-  text-align: center;
-  font-size: 30px;
-  font-weight: bold;
-  margin-top: 20px;
+  padding: 13px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.name {
+  font-size: 14px;
+  color: #666;
+}
+
+.value {
+  font-size: 29px;
+  font-weight: 800;
+  margin-top: 3px;
+}
+
+.error {
+  color: #c00;
+  font-weight: 700;
+  margin-top: 14px;
+}
+
+.note {
+  font-size: 12px;
+  color: #666;
+  line-height: 1.6;
+  margin-top: 14px;
 }
 </style>
 </head>
 
 <body>
 
-<h1>📐 三角関数測定</h1>
+<main>
 
-<div class="box">
+<h1>🔩 フランジ穴間計算</h1>
 
-<h2>高さを計算</h2>
+<div class="sub">
+PCD・穴数・穴径・フランジ外径から計算
+</div>
 
-<label>水平距離（m）</label>
-<input id="distance" type="number" step="0.01">
+<div class="card">
 
-<label>角度（°）</label>
-<input id="angle" type="number" step="0.1">
+<label>フランジ外径（mm）</label>
+<input id="outer" type="number" inputmode="decimal" step="0.01">
 
-<button onclick="calculateHeight()">
-高さを計算
+<label>PCD（mm）</label>
+<input id="pcd" type="number" inputmode="decimal" step="0.01">
+
+<label>穴数（個）</label>
+<input id="count" type="number" inputmode="numeric" step="1">
+
+<label>穴径（mm）</label>
+<input id="hole" type="number" inputmode="decimal" step="0.01">
+
+<button onclick="calculate()">
+計算する
 </button>
 
-<div id="result" class="result">
---
+<div id="error"></div>
+
+</div>
+
+<div class="card" id="results" style="display:none">
+
+<div class="result">
+<div class="name">隣接穴の中心間距離</div>
+<div class="value" id="center"></div>
+</div>
+
+<div class="result">
+<div class="name">隣接穴の端面同士の距離</div>
+<div class="value" id="edge"></div>
+</div>
+
+<div class="result">
+<div class="name">穴端面〜フランジ外周の距離</div>
+<div class="value" id="outerEdge"></div>
+</div>
+
+<div class="note">
+※穴はPCD上に等間隔で配置されているものとして計算します。<br>
+※「穴端面同士」は隣接する2つの穴の最短距離です。
 </div>
 
 </div>
+
+</main>
 
 <script>
 
-function calculateHeight() {
+function calculate() {
 
-  const distance =
-    Number(document.getElementById("distance").value);
+const D = Number(document.getElementById("outer").value);
+const P = Number(document.getElementById("pcd").value);
+const N = Number(document.getElementById("count").value);
+const d = Number(document.getElementById("hole").value);
 
-  const angle =
-    Number(document.getElementById("angle").value);
+const error = document.getElementById("error");
+const results = document.getElementById("results");
 
-  const radian =
-    angle * Math.PI / 180;
+error.textContent = "";
+results.style.display = "none";
 
-  const height =
-    distance * Math.tan(radian);
+if (!D || !P || !N || !d || D <= 0 || P <= 0 || N < 2 || d <= 0) {
+error.textContent = "すべての項目を正しく入力してください。";
+return;
+}
 
-  document.getElementById("result").innerHTML =
-    height.toFixed(2) + " m";
+if (P > D) {
+error.textContent = "PCDはフランジ外径以下にしてください。";
+return;
+}
+
+const center = P * Math.sin(Math.PI / N);
+
+const edge = center - d;
+
+const outerEdge = (D - P - d) / 2;
+
+if (edge < 0) {
+error.textContent = "穴同士が重なっています。寸法を確認してください。";
+return;
+}
+
+if (outerEdge < 0) {
+error.textContent = "穴がフランジ外周からはみ出します。寸法を確認してください。";
+return;
+}
+
+document.getElementById("center").innerHTML =
+center.toFixed(2) + " mm";
+
+document.getElementById("edge").innerHTML =
+edge.toFixed(2) + " mm";
+
+document.getElementById("outerEdge").innerHTML =
+outerEdge.toFixed(2) + " mm";
+
+results.style.display = "block";
+
 }
 
 </script>
