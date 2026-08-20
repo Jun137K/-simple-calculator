@@ -1,1 +1,1424 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0,
+               maximum-scale=1.0,user-scalable=no">
 
+<title>Ride Navi</title>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+html,body{
+    margin:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,
+                "Helvetica Neue",Arial,sans-serif;
+    background:#000;
+}
+
+#map{
+    position:absolute;
+    inset:0;
+}
+
+/* 上部 */
+
+.top{
+    position:absolute;
+    z-index:1000;
+    top:10px;
+    left:10px;
+    right:10px;
+
+    display:flex;
+    gap:10px;
+}
+
+.speedBox,
+.navigation{
+    background:rgba(10,15,22,.92);
+    color:white;
+    border-radius:18px;
+    box-shadow:0 4px 20px rgba(0,0,0,.4);
+}
+
+.speedBox{
+    width:150px;
+    padding:10px;
+    text-align:center;
+}
+
+.speed{
+    font-size:52px;
+    font-weight:bold;
+    line-height:1;
+}
+
+.unit{
+    font-size:14px;
+}
+
+.navigation{
+    flex:1;
+    text-align:center;
+    padding:8px;
+}
+
+.arrow{
+    font-size:55px;
+    font-weight:bold;
+    line-height:1;
+}
+
+.turn{
+    font-size:18px;
+    font-weight:bold;
+}
+
+.distance{
+    font-size:14px;
+    color:#bbb;
+}
+
+/* 下部 */
+
+.bottom{
+    position:absolute;
+    z-index:1000;
+    left:10px;
+    right:10px;
+    bottom:10px;
+
+    background:rgba(10,15,22,.94);
+    color:white;
+
+    border-radius:18px;
+    padding:12px;
+}
+
+.stats{
+    display:flex;
+    justify-content:space-around;
+    text-align:center;
+}
+
+.label{
+    font-size:11px;
+    color:#aaa;
+}
+
+.value{
+    font-size:18px;
+    font-weight:bold;
+}
+
+.buttons{
+    display:grid;
+    grid-template-columns:
+        repeat(4,1fr);
+    gap:6px;
+    margin-top:10px;
+}
+
+button{
+    border:0;
+    border-radius:10px;
+    padding:12px 5px;
+
+    background:#263242;
+    color:white;
+
+    font-size:12px;
+    font-weight:bold;
+}
+
+.primary{
+    background:#147ef5;
+}
+
+.status{
+    font-size:11px;
+    color:#7ac7ff;
+    margin-top:5px;
+}
+
+</style>
+</head>
+
+
+<body>
+
+<div id="map"></div>
+
+
+<div class="top">
+
+    <div class="speedBox">
+
+        <div id="speed"
+             class="speed">
+            0
+        </div>
+
+        <div class="unit">
+            km/h
+        </div>
+
+        <div id="status"
+             class="status">
+            GPS停止
+        </div>
+
+    </div>
+
+
+    <div class="navigation">
+
+        <div id="arrow"
+             class="arrow">
+            ↑
+        </div>
+
+        <div id="turn"
+             class="turn">
+            目的地を設定
+        </div>
+
+        <div id="distance"
+             class="distance">
+            地図をタップしてください
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<div class="bottom">
+
+    <div class="stats">
+
+        <div>
+            <div class="label">
+                最高速度
+            </div>
+
+            <div id="maxSpeed"
+                 class="value">
+                0 km/h
+            </div>
+        </div>
+
+
+        <div>
+            <div class="label">
+                走行距離
+            </div>
+
+            <div id="totalDistance"
+                 class="value">
+                0.00 km
+            </div>
+        </div>
+
+
+        <div>
+            <div class="label">
+                ルート
+            </div>
+
+            <div id="routeDistance"
+                 class="value">
+                --
+            </div>
+        </div>
+
+    </div>
+
+
+    <div class="buttons">
+
+        <button id="gpsButton"
+                class="primary">
+            GPS開始
+        </button>
+
+        <button id="routeButton">
+            ルート検索
+        </button>
+
+        <button id="compassButton">
+            コンパス
+        </button>
+
+        <button id="resetButton">
+            リセット
+        </button>
+
+    </div>
+
+</div>
+
+
+
+<script
+src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+
+<script>
+
+//////////////////////////////////////////////////
+// 地図
+//////////////////////////////////////////////////
+
+const map =
+    L.map("map").setView(
+        [35.681236,139.767125],
+        13
+    );
+
+
+L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+        maxZoom:19,
+        attribution:
+        "© OpenStreetMap contributors"
+    }
+).addTo(map);
+
+
+
+//////////////////////////////////////////////////
+// 変数
+//////////////////////////////////////////////////
+
+let watchID = null;
+
+let currentPosition = null;
+
+let destination = null;
+
+let userMarker = null;
+
+let destinationMarker = null;
+
+let routeLine = null;
+
+let routeSteps = [];
+
+let currentStep = 0;
+
+let totalDistance = 0;
+
+let maximumSpeed = 0;
+
+let previousPosition = null;
+
+let compassHeading = null;
+
+
+
+//////////////////////////////////////////////////
+// HTML取得
+//////////////////////////////////////////////////
+
+const speedElement =
+    document.getElementById("speed");
+
+const maxSpeedElement =
+    document.getElementById("maxSpeed");
+
+const totalDistanceElement =
+    document.getElementById("totalDistance");
+
+const routeDistanceElement =
+    document.getElementById("routeDistance");
+
+const statusElement =
+    document.getElementById("status");
+
+const arrowElement =
+    document.getElementById("arrow");
+
+const turnElement =
+    document.getElementById("turn");
+
+const distanceElement =
+    document.getElementById("distance");
+
+
+
+//////////////////////////////////////////////////
+// 距離計算
+//////////////////////////////////////////////////
+
+function calculateDistance(
+    lat1,
+    lon1,
+    lat2,
+    lon2
+){
+
+    const R = 6371000;
+
+    const dLat =
+        (lat2-lat1)
+        * Math.PI / 180;
+
+    const dLon =
+        (lon2-lon1)
+        * Math.PI / 180;
+
+    const a =
+        Math.sin(dLat/2)
+        * Math.sin(dLat/2)
+
+        +
+
+        Math.cos(
+            lat1*Math.PI/180
+        )
+
+        *
+
+        Math.cos(
+            lat2*Math.PI/180
+        )
+
+        *
+
+        Math.sin(dLon/2)
+        * Math.sin(dLon/2);
+
+    const c =
+        2 *
+        Math.atan2(
+            Math.sqrt(a),
+            Math.sqrt(1-a)
+        );
+
+    return R*c;
+}
+
+
+
+//////////////////////////////////////////////////
+// 方位角
+//////////////////////////////////////////////////
+
+function calculateBearing(
+    lat1,
+    lon1,
+    lat2,
+    lon2
+){
+
+    const y =
+        Math.sin(
+            (lon2-lon1)
+            * Math.PI/180
+        )
+
+        *
+
+        Math.cos(
+            lat2*Math.PI/180
+        );
+
+
+    const x =
+        Math.cos(
+            lat1*Math.PI/180
+        )
+
+        *
+
+        Math.sin(
+            lat2*Math.PI/180
+        )
+
+        -
+
+        Math.sin(
+            lat1*Math.PI/180
+        )
+
+        *
+
+        Math.cos(
+            lat2*Math.PI/180
+        )
+
+        *
+
+        Math.cos(
+            (lon2-lon1)
+            * Math.PI/180
+        );
+
+
+    return (
+        Math.atan2(y,x)
+        *180/Math.PI
+        +360
+    )%360;
+
+}
+
+
+
+//////////////////////////////////////////////////
+// GPS開始
+//////////////////////////////////////////////////
+
+document
+.getElementById("gpsButton")
+.onclick = function(){
+
+    if(!navigator.geolocation){
+
+        alert(
+            "このiPhoneではGPSを利用できません"
+        );
+
+        return;
+    }
+
+
+    if(watchID !== null){
+
+        return;
+    }
+
+
+    watchID =
+        navigator.geolocation
+        .watchPosition(
+
+            updateGPS,
+
+            function(error){
+
+                statusElement.textContent =
+                    "GPSエラー";
+
+                console.log(error);
+
+            },
+
+            {
+
+                enableHighAccuracy:true,
+
+                maximumAge:1000,
+
+                timeout:10000
+
+            }
+
+        );
+
+
+    statusElement.textContent =
+        "GPS取得中...";
+
+};
+
+
+
+//////////////////////////////////////////////////
+// GPS更新
+//////////////////////////////////////////////////
+
+function updateGPS(position){
+
+    const lat =
+        position.coords.latitude;
+
+    const lon =
+        position.coords.longitude;
+
+
+    const newPosition = {
+        lat:lat,
+        lon:lon
+    };
+
+
+    //////////////////////////////////////////////
+    // 走行距離
+    //////////////////////////////////////////////
+
+    if(previousPosition){
+
+        const d =
+            calculateDistance(
+                previousPosition.lat,
+                previousPosition.lon,
+                lat,
+                lon
+            );
+
+        if(d < 100){
+
+            totalDistance += d;
+
+        }
+
+    }
+
+
+    previousPosition =
+        newPosition;
+
+
+    totalDistanceElement.textContent =
+        (
+            totalDistance/1000
+        ).toFixed(2)
+        +" km";
+
+
+    //////////////////////////////////////////////
+    // 速度
+    //////////////////////////////////////////////
+
+    let speed =
+        position.coords.speed;
+
+
+    if(speed === null){
+
+        speed = 0;
+
+    }
+
+
+    speed =
+        Math.max(
+            0,
+            speed*3.6
+        );
+
+
+    const displaySpeed =
+        Math.round(speed);
+
+
+    speedElement.textContent =
+        displaySpeed;
+
+
+    if(speed > maximumSpeed){
+
+        maximumSpeed = speed;
+
+        maxSpeedElement.textContent =
+            Math.round(maximumSpeed)
+            +" km/h";
+
+    }
+
+
+    //////////////////////////////////////////////
+    // 現在位置
+    //////////////////////////////////////////////
+
+    currentPosition =
+        newPosition;
+
+
+    if(!userMarker){
+
+        userMarker =
+            L.marker(
+                [lat,lon]
+            ).addTo(map);
+
+    }
+    else{
+
+        userMarker
+        .setLatLng(
+            [lat,lon]
+        );
+
+    }
+
+
+    statusElement.textContent =
+        "GPS受信中";
+
+
+    //////////////////////////////////////////////
+    // 目的地
+    //////////////////////////////////////////////
+
+    if(destination){
+
+        updateDirection();
+
+    }
+
+
+    //////////////////////////////////////////////
+    // 曲がり角案内
+    //////////////////////////////////////////////
+
+    if(routeSteps.length){
+
+        updateNavigation();
+
+    }
+
+}
+
+
+
+//////////////////////////////////////////////////
+// 地図をタップ
+//////////////////////////////////////////////////
+
+map.on(
+    "click",
+    function(e){
+
+        destination = {
+
+            lat:e.latlng.lat,
+
+            lon:e.latlng.lng
+
+        };
+
+
+        if(destinationMarker){
+
+            destinationMarker.remove();
+
+        }
+
+
+        destinationMarker =
+            L.marker(
+                [
+                    destination.lat,
+                    destination.lon
+                ]
+            )
+            .addTo(map);
+
+
+        turnElement.textContent =
+            "目的地を設定";
+
+
+        distanceElement.textContent =
+            "ルート検索を押してください";
+
+    }
+);
+
+
+
+//////////////////////////////////////////////////
+// 目的地方向
+//////////////////////////////////////////////////
+
+function updateDirection(){
+
+    if(!currentPosition ||
+       !destination){
+
+        return;
+
+    }
+
+
+    const bearing =
+        calculateBearing(
+            currentPosition.lat,
+            currentPosition.lon,
+            destination.lat,
+            destination.lon
+        );
+
+
+    let relative =
+        bearing;
+
+
+    if(compassHeading !== null){
+
+        relative =
+            (
+                bearing
+                - compassHeading
+                +360
+            )%360;
+
+    }
+
+
+    arrowElement.style.transform =
+        "rotate("+relative+"deg)";
+
+
+    const distance =
+        calculateDistance(
+            currentPosition.lat,
+            currentPosition.lon,
+            destination.lat,
+            destination.lon
+        );
+
+
+    distanceElement.textContent =
+        formatDistance(distance);
+
+}
+
+
+
+//////////////////////////////////////////////////
+// 距離表示
+//////////////////////////////////////////////////
+
+function formatDistance(
+    meters
+){
+
+    if(meters < 1000){
+
+        return Math.round(meters)
+        +" m";
+
+    }
+
+
+    return (
+        meters/1000
+    ).toFixed(2)
+    +" km";
+
+}
+
+
+
+//////////////////////////////////////////////////
+// ルート検索
+//////////////////////////////////////////////////
+
+document
+.getElementById("routeButton")
+.onclick =
+async function(){
+
+    if(!currentPosition){
+
+        alert(
+            "先にGPS開始を押してください"
+        );
+
+        return;
+
+    }
+
+
+    if(!destination){
+
+        alert(
+            "地図をタップして目的地を設定してください"
+        );
+
+        return;
+
+    }
+
+
+    turnElement.textContent =
+        "ルート検索中...";
+
+
+    try{
+
+        const url =
+            "https://router.project-osrm.org/route/v1/driving/"
+
+            +
+
+            currentPosition.lon
+            +","
+            +currentPosition.lat
+
+            +
+
+            ";"
+
+            +
+
+            destination.lon
+            +","
+            +destination.lat
+
+            +
+
+            "?overview=full"
+            +"&geometries=geojson"
+            +"&steps=true";
+
+
+        const response =
+            await fetch(url);
+
+
+        const data =
+            await response.json();
+
+
+        if(!data.routes ||
+           !data.routes.length){
+
+            throw new Error(
+                "ルートがありません"
+            );
+
+        }
+
+
+        const route =
+            data.routes[0];
+
+
+        //////////////////////////////////////////
+        // ルート線
+        //////////////////////////////////////////
+
+        if(routeLine){
+
+            routeLine.remove();
+
+        }
+
+
+        const coordinates =
+            route.geometry.coordinates
+            .map(
+                p => [
+                    p[1],
+                    p[0]
+                ]
+            );
+
+
+        routeLine =
+            L.polyline(
+                coordinates,
+                {
+                    color:"#147ef5",
+                    weight:7
+                }
+            )
+            .addTo(map);
+
+
+        map.fitBounds(
+            routeLine.getBounds(),
+            {
+                padding:[20,150]
+            }
+        );
+
+
+        //////////////////////////////////////////
+        // 曲がり角
+        //////////////////////////////////////////
+
+        routeSteps =
+            route.legs
+            .flatMap(
+                leg => leg.steps
+            );
+
+
+        currentStep = 0;
+
+
+        routeDistanceElement.textContent =
+            formatDistance(
+                route.distance
+            );
+
+
+        updateNavigation();
+
+
+    }
+    catch(error){
+
+        console.error(error);
+
+        alert(
+            "ルート検索に失敗しました"
+        );
+
+    }
+
+};
+
+
+
+//////////////////////////////////////////////////
+// 曲がり角案内
+//////////////////////////////////////////////////
+
+function updateNavigation(){
+
+    if(!currentPosition ||
+       !routeSteps.length){
+
+        return;
+
+    }
+
+
+    while(
+        currentStep <
+        routeSteps.length-1
+    ){
+
+        const step =
+            routeSteps[currentStep];
+
+
+        const location =
+            step.maneuver.location;
+
+
+        const d =
+            calculateDistance(
+
+                currentPosition.lat,
+                currentPosition.lon,
+
+                location[1],
+                location[0]
+
+            );
+
+
+        //////////////////////////////////////////
+        // 曲がり角を通過
+        //////////////////////////////////////////
+
+        if(d < 35){
+
+            currentStep++;
+
+        }
+        else{
+
+            break;
+
+        }
+
+    }
+
+
+    const step =
+        routeSteps[currentStep];
+
+
+    if(!step){
+
+        turnElement.textContent =
+            "到着しました";
+
+        distanceElement.textContent =
+            "";
+
+        arrowElement.textContent =
+            "✓";
+
+        return;
+
+    }
+
+
+    const location =
+        step.maneuver.location;
+
+
+    const d =
+        calculateDistance(
+
+            currentPosition.lat,
+            currentPosition.lon,
+
+            location[1],
+            location[0]
+
+        );
+
+
+    //////////////////////////////////////////////
+    // 曲がる方向
+    //////////////////////////////////////////////
+
+    let direction =
+        "直進";
+
+
+    const modifier =
+        step.maneuver.modifier;
+
+
+    if(modifier === "right"){
+
+        direction =
+            "右折";
+
+    }
+
+    else if(modifier === "left"){
+
+        direction =
+            "左折";
+
+    }
+
+    else if(
+        modifier === "slight right"
+    ){
+
+        direction =
+            "右斜め";
+
+    }
+
+    else if(
+        modifier === "slight left"
+    ){
+
+        direction =
+            "左斜め";
+
+    }
+
+    else if(
+        modifier === "uturn"
+    ){
+
+        direction =
+            "Uターン";
+
+    }
+
+
+    //////////////////////////////////////////////
+    // 距離による表示
+    //////////////////////////////////////////////
+
+    if(d <= 30){
+
+        turnElement.textContent =
+            "今すぐ "+direction+"！";
+
+        arrowElement.textContent =
+            direction === "右折"
+            ? "→"
+            : direction === "左折"
+            ? "←"
+            : "↑";
+
+    }
+
+    else if(d <= 100){
+
+        turnElement.textContent =
+            "まもなく "+direction;
+
+        arrowElement.textContent =
+            direction === "右折"
+            ? "↗"
+            : direction === "左折"
+            ? "↖"
+            : "↑";
+
+    }
+
+    else if(d <= 200){
+
+        turnElement.textContent =
+            "次は "+direction;
+
+        arrowElement.textContent =
+            direction === "右折"
+            ? "↗"
+            : direction === "左折"
+            ? "↖"
+            : "↑";
+
+    }
+
+    else if(d <= 300){
+
+        turnElement.textContent =
+            "300m先 "+direction;
+
+        arrowElement.textContent =
+            direction === "右折"
+            ? "↗"
+            : direction === "左折"
+            ? "↖"
+            : "↑";
+
+    }
+
+    else{
+
+        turnElement.textContent =
+            direction;
+
+        arrowElement.textContent =
+            "↑";
+
+    }
+
+
+    distanceElement.textContent =
+        formatDistance(d);
+
+}
+
+
+
+//////////////////////////////////////////////////
+// コンパス
+//////////////////////////////////////////////////
+
+document
+.getElementById("compassButton")
+.onclick =
+async function(){
+
+    try{
+
+        if(
+            typeof DeviceOrientationEvent
+            !== "undefined"
+
+            &&
+
+            typeof DeviceOrientationEvent
+            .requestPermission
+            === "function"
+        ){
+
+            const permission =
+                await
+                DeviceOrientationEvent
+                .requestPermission(
+                    true
+                );
+
+
+            if(
+                permission !==
+                "granted"
+            ){
+
+                alert(
+                    "コンパスの許可が必要です"
+                );
+
+                return;
+
+            }
+
+        }
+
+
+        function orientation(
+            event
+        ){
+
+            if(
+                typeof
+                event.webkitCompassHeading
+                === "number"
+            ){
+
+                compassHeading =
+                    event.webkitCompassHeading;
+
+            }
+
+            else if(
+                event.absolute
+                &&
+                typeof event.alpha
+                === "number"
+            ){
+
+                compassHeading =
+                    (
+                        360-event.alpha
+                    )%360;
+
+            }
+
+
+            updateDirection();
+
+        }
+
+
+        window.addEventListener(
+            "deviceorientationabsolute",
+            orientation,
+            true
+        );
+
+
+        window.addEventListener(
+            "deviceorientation",
+            orientation,
+            true
+        );
+
+
+        statusElement.textContent =
+            "コンパス有効";
+
+    }
+    catch(error){
+
+        alert(
+            "コンパスを有効にできません"
+        );
+
+    }
+
+};
+
+
+
+//////////////////////////////////////////////////
+// リセット
+//////////////////////////////////////////////////
+
+document
+.getElementById("resetButton")
+.onclick =
+function(){
+
+    if(watchID !== null){
+
+        navigator.geolocation
+        .clearWatch(
+            watchID
+        );
+
+        watchID = null;
+
+    }
+
+
+    currentPosition = null;
+
+    destination = null;
+
+    previousPosition = null;
+
+    totalDistance = 0;
+
+    maximumSpeed = 0;
+
+    routeSteps = [];
+
+    currentStep = 0;
+
+    compassHeading = null;
+
+
+    speedElement.textContent =
+        "0";
+
+
+    maxSpeedElement.textContent =
+        "0 km/h";
+
+
+    totalDistanceElement.textContent =
+        "0.00 km";
+
+
+    routeDistanceElement.textContent =
+        "--";
+
+
+    turnElement.textContent =
+        "目的地を設定";
+
+
+    distanceElement.textContent =
+        "地図をタップしてください";
+
+
+    arrowElement.textContent =
+        "↑";
+
+
+    if(userMarker){
+
+        userMarker.remove();
+
+        userMarker = null;
+
+    }
+
+
+    if(destinationMarker){
+
+        destinationMarker.remove();
+
+        destinationMarker = null;
+
+    }
+
+
+    if(routeLine){
+
+        routeLine.remove();
+
+        routeLine = null;
+
+    }
+
+
+    statusElement.textContent =
+        "GPS停止";
+
+};
+
+
+
+</script>
+
+</body>
+</html>
