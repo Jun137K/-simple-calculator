@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>三角関数（Sin / Cos / Tan）計算アプリ</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f5f7fb;color:#20242b}
+.container{max-width:1100px;margin:auto;padding:18px}
+h1{font-size:clamp(24px,5vw,42px);margin:4px 0 8px;text-align:center}
+.subtitle{text-align:center;color:#5e6875;margin-bottom:18px}
+.grid{display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:14px}
+.card{background:#fff;border:1px solid #d9e0ea;border-radius:16px;padding:18px;box-shadow:0 2px 8px #0000000b}
+h2{font-size:21px;margin:0 0 14px;color:#1264c7}
+h3{margin:8px 0;font-size:18px}
+label{display:block;font-weight:700;margin:12px 0 6px}
+input{width:100%;padding:13px;border:1px solid #cbd5e1;border-radius:10px;font-size:20px}
+.unit{font-size:14px;color:#667085}
+.result{font-size:24px;font-weight:800;padding:12px;border-radius:10px;margin:9px 0}
+.sin{background:#fff0f0;border:1px solid #f4bcbc;color:#c92d2d}
+.cos{background:#effaf1;border:1px solid #bde5c4;color:#25803a}
+.tan{background:#fff8e8;border:1px solid #f2d69a;color:#b66a00}
+button{border:0;border-radius:10px;padding:12px 15px;background:#1264c7;color:#fff;font-size:17px;font-weight:700;margin:5px 3px;cursor:pointer}
+button.secondary{background:#eef5ff;color:#1264c7;border:1px solid #b9d5f8}
+.formula{padding:12px;border-radius:10px;background:#f7f9fc;margin-top:10px;line-height:1.8}
+svg{width:100%;height:auto;display:block}
+.diagram-title{text-align:center;font-weight:800;margin-bottom:5px}
+.distance{margin-top:14px}
+.distance-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.radio{display:flex;gap:8px;align-items:center;margin:10px 0;font-weight:600}
+.radio input{width:auto}
+.notice{margin-top:14px;padding:12px;border-radius:10px;background:#eef6ff;border:1px solid #c6ddfa;color:#38536f}
+.small{font-size:14px;color:#667085}
+@media(max-width:800px){.grid,.distance-grid{grid-template-columns:1fr}.container{padding:10px}.card{padding:14px}}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>△ 三角関数（Sin / Cos / Tan）計算アプリ</h1>
+<div class="subtitle">角度を入力すると、sin・cos・tanの値と「どこの距離か」を表示します</div>
+
+<div class="grid">
+  <section class="card">
+    <h2>① 角度を入力</h2>
+    <label for="angle">角度 θ</label>
+    <input id="angle" type="number" value="45" min="0" max="89.9999" step="0.1">
+    <span class="unit">度（°）</span>
+    <div>
+      <button class="secondary" onclick="setAngle(0)">0°</button>
+      <button class="secondary" onclick="setAngle(30)">30°</button>
+      <button class="secondary" onclick="setAngle(45)">45°</button>
+      <button class="secondary" onclick="setAngle(60)">60°</button>
+      <button class="secondary" onclick="setAngle(90)">90°</button>
+    </div>
+    <div class="notice">※ 90°では tan は定義できません。</div>
+  </section>
+
+  <section class="card">
+    <h2>② 三角関数の値</h2>
+    <div class="result sin">sin <span id="a1">45</span>° ＝ <span id="sinVal">0.7071</span></div>
+    <div class="result cos">cos <span id="a2">45</span>° ＝ <span id="cosVal">0.7071</span></div>
+    <div class="result tan">tan <span id="a3">45</span>° ＝ <span id="tanVal">1.0000</span></div>
+  </section>
+
+  <section class="card">
+    <div class="diagram-title">③ どの部分を計算している？</div>
+    <svg viewBox="0 0 500 310" aria-label="直角三角形">
+      <line x1="90" y1="250" x2="90" y2="55" stroke="#222" stroke-width="5"/>
+      <line x1="90" y1="250" x2="425" y2="250" stroke="#222" stroke-width="5"/>
+      <line x1="90" y1="55" x2="425" y2="250" stroke="#222" stroke-width="5"/>
+      <text x="105" y="145" fill="#c92d2d" font-size="22" font-weight="bold">対辺（高さ）</text>
+      <text x="205" y="282" fill="#25803a" font-size="22" font-weight="bold">隣辺（底辺）</text>
+      <text x="270" y="125" fill="#1264c7" font-size="22" font-weight="bold">斜辺</text>
+      <text x="350" y="230" fill="#111" font-size="22" font-weight="bold">θ</text>
+      <text x="102" y="242" font-size="25">□</text>
+    </svg>
+    <div class="formula">
+      <b class="sin">sin θ</b> ＝ 対辺 ÷ 斜辺<br>
+      <b class="cos">cos θ</b> ＝ 隣辺 ÷ 斜辺<br>
+      <b class="tan">tan θ</b> ＝ 対辺 ÷ 隣辺
+    </div>
+  </section>
+</div>
+
+<section class="card distance">
+<h2>④ 距離計算（角度＋基準距離から求める）</h2>
+<div class="distance-grid">
+  <div>
+    <label for="base">基準となる距離</label>
+    <input id="base" type="number" value="100" step="0.01">
+    <span class="unit">mm</span>
+
+    <label>計算する距離</label>
+    <label class="radio"><input type="radio" name="mode" value="sin" checked> sin（対辺の長さ）</label>
+    <label class="radio"><input type="radio" name="mode" value="cos"> cos（隣辺の長さ）</label>
+    <label class="radio"><input type="radio" name="mode" value="tan"> tan（対辺の長さ）</label>
+    <button onclick="calcDistance()">計算する</button>
+  </div>
+
+  <div>
+    <div class="result sin" id="distanceResult">sin 45° × 100 mm ＝ 70.7107 mm</div>
+    <div class="formula" id="distanceFormula">
+      対辺 ＝ 斜辺 × sin θ<br>
+      ＝ 100 mm × sin 45°<br>
+      ＝ <b>70.7107 mm</b>
+    </div>
+    <div class="formula">
+      <b>参考：この条件での三角形</b><br>
+      対辺（高さ）＝ <span id="opp">70.7107</span> mm<br>
+      隣辺（底辺）＝ <span id="adj">70.7107</span> mm<br>
+      斜辺（基準）＝ <span id="hyp">100.0000</span> mm
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:14px">
+  <div class="diagram-title">⑤ 距離の位置を確認</div>
+  <svg viewBox="0 0 700 330" aria-label="距離計算の説明図">
+    <line x1="100" y1="260" x2="100" y2="55" stroke="#222" stroke-width="5"/>
+    <line x1="100" y1="260" x2="610" y2="260" stroke="#222" stroke-width="5"/>
+    <line x1="100" y1="55" x2="610" y2="260" stroke="#222" stroke-width="5"/>
+    <text x="118" y="150" fill="#c92d2d" font-size="24" font-weight="bold">対辺</text>
+    <text x="118" y="177" fill="#c92d2d" font-size="18">高さ</text>
+    <text x="300" y="300" fill="#25803a" font-size="24" font-weight="bold">隣辺（底辺）</text>
+    <text x="350" y="125" fill="#1264c7" font-size="24" font-weight="bold">斜辺＝基準距離</text>
+    <text x="555" y="240" font-size="24" font-weight="bold">θ</text>
+    <text x="190" y="145" fill="#c92d2d" font-size="20" id="svgOpp">← sinで計算</text>
+    <text x="285" y="230" fill="#25803a" font-size="20" id="svgAdj">← cosで計算</text>
+  </svg>
+</div>
+</section>
+
+<div class="notice">
+<b>使い方：</b> 角度を変更すると sin・cos・tan が自動更新されます。距離計算では、基準距離を入力して sin / cos / tan を選択してください。
+</div>
+</div>
+
+<script>
+function rad(deg){return deg*Math.PI/180}
+function fmt(n){return Number.isFinite(n)?n.toFixed(4):"定義できません"}
+function update(){
+  let a=parseFloat(document.getElementById("angle").value);
+  if(!Number.isFinite(a)) a=45;
+  a=Math.max(0,Math.min(90,a));
+  let s=Math.sin(rad(a)), c=Math.cos(rad(a)), t=Math.tan(rad(a));
+  if(Math.abs(c)<1e-12)t=NaN;
+  ["a1","a2","a3"].forEach(id=>document.getElementById(id).textContent=a);
+  document.getElementById("sinVal").textContent=fmt(s);
+  document.getElementById("cosVal").textContent=fmt(c);
+  document.getElementById("tanVal").textContent=fmt(t);
+  calcDistance();
+}
+function setAngle(a){document.getElementById("angle").value=a;update()}
+function calcDistance(){
+  let a=parseFloat(document.getElementById("angle").value)||45;
+  let base=parseFloat(document.getElementById("base").value)||0;
+  let mode=document.querySelector('input[name="mode"]:checked').value;
+  let s=Math.sin(rad(a)), c=Math.cos(rad(a)), t=Math.tan(rad(a));
+  let result=0, label="", formula="";
+  if(mode==="sin"){result=base*s;label="sin";formula=`対辺 ＝ 斜辺 × sin θ<br>＝ ${base} mm × sin ${a}°<br>＝ <b>${fmt(result)} mm</b>`}
+  if(mode==="cos"){result=base*c;label="cos";formula=`隣辺 ＝ 斜辺 × cos θ<br>＝ ${base} mm × cos ${a}°<br>＝ <b>${fmt(result)} mm</b>`}
+  if(mode==="tan"){
+    if(Math.abs(c)<1e-12){result=NaN}
+    else result=base*t;
+    label="tan";formula=`対辺 ＝ 隣辺 × tan θ<br>＝ ${base} mm × tan ${a}°<br>＝ <b>${fmt(result)} mm</b>`;
+  }
+  document.getElementById("distanceResult").textContent=`${label} ${a}° × ${base} mm ＝ ${fmt(result)} mm`;
+  document.getElementById("distanceFormula").innerHTML=formula;
+  let opp=base*s,adj=base*c;
+  document.getElementById("opp").textContent=fmt(opp);
+  document.getElementById("adj").textContent=fmt(adj);
+  document.getElementById("hyp").textContent=base.toFixed(4);
+}
+document.getElementById("angle").addEventListener("input",update);
+document.getElementById("base").addEventListener("input",calcDistance);
+document.querySelectorAll('input[name="mode"]').forEach(x=>x.addEventListener("change",calcDistance));
+update();
+</script>
+</body>
+</html>
