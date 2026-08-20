@@ -1,217 +1,1209 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>フランジ穴間計算</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>フランジ穴間・端面距離計算</title>
 
 <style>
-* {
-  box-sizing: border-box;
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:#f3f6fa;
+  color:#172033;
+  font-family:-apple-system,BlinkMacSystemFont,
+  "Yu Gothic",Meiryo,sans-serif;
 }
 
-body {
-  margin: 0;
-  background: #f2f2f7;
-  color: #111;
-  font-family: -apple-system, BlinkMacSystemFont, "Noto Sans JP", sans-serif;
+header{
+  background:#fff;
+  padding:18px 16px;
+  border-bottom:1px solid #d9e1eb;
 }
 
-main {
-  max-width: 520px;
-  margin: auto;
-  padding: 18px 16px 35px;
+h1{
+  margin:0;
+  color:#123f7a;
+  font-size:23px;
 }
 
-h1 {
-  text-align: center;
-  font-size: 25px;
-  margin: 8px 0 4px;
+.sub{
+  margin-top:5px;
+  color:#66758a;
+  font-size:13px;
 }
 
-.sub {
-  text-align: center;
-  color: #666;
-  font-size: 13px;
-  margin-bottom: 18px;
+main{
+  max-width:1050px;
+  margin:auto;
+  padding:14px;
 }
 
-.card {
-  background: white;
-  border-radius: 18px;
-  padding: 18px;
-  margin: 12px 0;
-  box-shadow: 0 2px 10px rgba(0,0,0,.07);
+.card{
+  background:#fff;
+  border:1px solid #d7e0eb;
+  border-radius:14px;
+  margin-bottom:14px;
+  overflow:hidden;
 }
 
-label {
-  display: block;
-  font-weight: 700;
-  margin: 13px 0 6px;
+.title{
+  padding:13px 15px;
+  background:#eef5fd;
+  border-bottom:1px solid #d7e0eb;
+  color:#124481;
+  font-weight:800;
+  font-size:18px;
 }
 
-input {
-  width: 100%;
-  padding: 13px;
-  font-size: 22px;
-  border: 1px solid #ccc;
-  border-radius: 11px;
+.pad{
+  padding:14px;
 }
 
-button {
-  width: 100%;
-  padding: 15px;
-  margin-top: 18px;
-  border: 0;
-  border-radius: 12px;
-  background: #0b5cff;
-  color: white;
-  font-size: 18px;
-  font-weight: 700;
+.inputs{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
 }
 
-.result {
-  padding: 13px 0;
-  border-bottom: 1px solid #eee;
+label{
+  font-weight:700;
+  font-size:14px;
+  display:block;
+  margin-bottom:5px;
 }
 
-.name {
-  font-size: 14px;
-  color: #666;
+input{
+  width:100%;
+  padding:12px;
+  border:1px solid #b9c7d8;
+  border-radius:9px;
+  font-size:18px;
 }
 
-.value {
-  font-size: 29px;
-  font-weight: 800;
-  margin-top: 3px;
+button{
+  margin-top:14px;
+  width:100%;
+  padding:14px;
+  border:0;
+  border-radius:10px;
+  background:#1877d2;
+  color:#fff;
+  font-size:18px;
+  font-weight:800;
 }
 
-.error {
-  color: #c00;
-  font-weight: 700;
-  margin-top: 14px;
+button:active{
+  transform:scale(.99);
 }
 
-.note {
-  font-size: 12px;
-  color: #666;
-  line-height: 1.6;
-  margin-top: 14px;
+.results{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+}
+
+.result{
+  padding:12px;
+  border:1px solid #d7e0eb;
+  border-radius:10px;
+  background:#fff;
+}
+
+.result b{
+  display:block;
+  font-size:13px;
+  line-height:1.45;
+}
+
+.result .num{
+  font-size:23px;
+  font-weight:900;
+  margin-top:7px;
+  white-space:nowrap;
+}
+
+.result .formula{
+  font-size:12px;
+  color:#66758a;
+  margin-top:5px;
+  line-height:1.5;
+}
+
+.blue{
+  border-left:5px solid #1769d1;
+}
+
+.green{
+  border-left:5px solid #15945f;
+}
+
+.orange{
+  border-left:5px solid #dd8615;
+}
+
+.purple{
+  border-left:5px solid #7250c5;
+}
+
+.layout{
+  display:grid;
+  grid-template-columns:1.05fr .95fr;
+  gap:14px;
+}
+
+.box{
+  border:1px solid #d7e0eb;
+  border-radius:12px;
+  padding:10px;
+  background:#fff;
+}
+
+.box h3{
+  font-size:16px;
+  margin:3px 0 8px;
+  color:#173f78;
+}
+
+svg{
+  width:100%;
+  height:auto;
+  display:block;
+}
+
+.formulas{
+  line-height:2;
+  font-size:14px;
+}
+
+@media(max-width:800px){
+
+  .inputs{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .results{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .layout{
+    grid-template-columns:1fr;
+  }
+}
+
+@media(max-width:480px){
+
+  .inputs,
+  .results{
+    grid-template-columns:1fr;
+  }
+
+  h1{
+    font-size:20px;
+  }
 }
 </style>
 </head>
 
 <body>
 
-<main>
+<header>
 
-<h1>🔩 フランジ穴間計算</h1>
+<h1>🔧 フランジ穴間・端面距離計算</h1>
 
 <div class="sub">
-PCD・穴数・穴径・フランジ外径から計算
+フランジ外径・PCD・穴数・穴径から、
+ノギスで測定する距離を計算します
 </div>
+
+</header>
+
+
+<main>
+
+<!-- 入力 -->
 
 <div class="card">
 
-<label>フランジ外径（mm）</label>
-<input id="outer" type="number" inputmode="decimal" step="0.01">
+<div class="title">
+① 条件を入力
+</div>
 
-<label>PCD（mm）</label>
-<input id="pcd" type="number" inputmode="decimal" step="0.01">
+<div class="pad">
 
-<label>穴数（個）</label>
-<input id="count" type="number" inputmode="numeric" step="1">
+<div class="inputs">
 
-<label>穴径（mm）</label>
-<input id="hole" type="number" inputmode="decimal" step="0.01">
+<div>
+<label>フランジ外径</label>
+<input id="fd" type="number" value="250" step="0.01">
+<small>mm</small>
+</div>
 
-<button onclick="calculate()">
+<div>
+<label>PCD</label>
+<input id="pcd" type="number" value="200" step="0.01">
+<small>mm</small>
+</div>
+
+<div>
+<label>穴数</label>
+<input id="n" type="number" value="8" step="1" min="2">
+<small>穴</small>
+</div>
+
+<div>
+<label>穴径</label>
+<input id="d" type="number" value="20" step="0.01">
+<small>mm</small>
+</div>
+
+</div>
+
+<button id="calc">
 計算する
 </button>
 
-<div id="error"></div>
+</div>
+</div>
+
+
+<!-- 結果 -->
+
+<div class="card">
+
+<div class="title">
+② 計算結果
+</div>
+
+<div class="pad">
+
+<div class="results">
+
+<div class="result blue">
+
+<b>
+① 隣接穴の中心間距離
+</b>
+
+<div class="num" id="r1">
+---
+</div>
+
+<div class="formula" id="f1">
+</div>
 
 </div>
 
-<div class="card" id="results" style="display:none">
 
-<div class="result">
-<div class="name">隣接穴の中心間距離</div>
-<div class="value" id="center"></div>
+<div class="result green">
+
+<b>
+② 隣接穴の端面～端面距離
+</b>
+
+<div class="num" id="r2">
+---
 </div>
 
-<div class="result">
-<div class="name">隣接穴の端面同士の距離</div>
-<div class="value" id="edge"></div>
-</div>
-
-<div class="result">
-<div class="name">穴端面〜フランジ外周の距離</div>
-<div class="value" id="outerEdge"></div>
-</div>
-
-<div class="note">
-※穴はPCD上に等間隔で配置されているものとして計算します。<br>
-※「穴端面同士」は隣接する2つの穴の最短距離です。
+<div class="formula" id="f2">
 </div>
 
 </div>
+
+
+<div class="result orange">
+
+<b>
+③ フランジ端面～穴端面
+</b>
+
+<div class="num" id="r3">
+---
+</div>
+
+<div class="formula" id="f3">
+</div>
+
+</div>
+
+
+<div class="result purple">
+
+<b>
+④ フランジ端面～穴中心
+</b>
+
+<div class="num" id="r4">
+---
+</div>
+
+<div class="formula" id="f4">
+</div>
+
+</div>
+
+</div>
+</div>
+</div>
+
+
+<!-- 図 -->
+
+<div class="layout">
+
+
+<div class="card">
+
+<div class="title">
+③ フランジ平面図：どこを測るか
+</div>
+
+<div class="pad">
+
+<div class="box">
+
+<h3>
+上から見たフランジ
+</h3>
+
+<svg id="top" viewBox="0 0 600 600">
+</svg>
+
+</div>
+
+</div>
+
+</div>
+
+
+<div>
+
+<div class="card">
+
+<div class="title">
+④ 測定箇所の拡大図
+</div>
+
+<div class="pad">
+
+
+<!-- 中心間 -->
+
+<div class="box">
+
+<h3 style="color:#1769d1">
+① 穴の中心 ～ 隣の穴の中心
+</h3>
+
+<svg viewBox="0 0 600 170">
+
+<defs>
+
+<marker
+id="m1"
+markerWidth="9"
+markerHeight="9"
+refX="5"
+refY="4.5"
+orient="auto">
+
+<path
+d="M0 0L9 4.5L0 9Z"
+fill="#1769d1"/>
+
+</marker>
+
+</defs>
+
+
+<circle
+cx="120"
+cy="85"
+r="40"
+fill="white"
+stroke="#222"
+stroke-width="3"/>
+
+<circle
+cx="480"
+cy="85"
+r="40"
+fill="white"
+stroke="#222"
+stroke-width="3"/>
+
+
+<circle
+cx="120"
+cy="85"
+r="4"/>
+
+<circle
+cx="480"
+cy="85"
+r="4"/>
+
+
+<line
+x1="120"
+y1="85"
+x2="480"
+y2="85"
+stroke="#1769d1"
+stroke-width="4"
+marker-start="url(#m1)"
+marker-end="url(#m1)"/>
+
+
+<text
+x="300"
+y="55"
+text-anchor="middle"
+font-size="20"
+font-weight="bold"
+fill="#1769d1">
+
+① 中心間距離
+
+</text>
+
+</svg>
+
+</div>
+
+
+<!-- 端面間 -->
+
+<div class="box" style="margin-top:12px">
+
+<h3 style="color:#15945f">
+
+② 穴の端面 ～ 隣の穴の端面
+
+</h3>
+
+<svg viewBox="0 0 600 170">
+
+<defs>
+
+<marker
+id="m2"
+markerWidth="9"
+markerHeight="9"
+refX="5"
+refY="4.5"
+orient="auto">
+
+<path
+d="M0 0L9 4.5L0 9Z"
+fill="#15945f"/>
+
+</marker>
+
+</defs>
+
+
+<circle
+cx="120"
+cy="85"
+r="40"
+fill="white"
+stroke="#222"
+stroke-width="3"/>
+
+<circle
+cx="480"
+cy="85"
+r="40"
+fill="white"
+stroke="#222"
+stroke-width="3"/>
+
+
+<line
+x1="160"
+y1="85"
+x2="440"
+y2="85"
+stroke="#15945f"
+stroke-width="4"
+marker-start="url(#m2)"
+marker-end="url(#m2)"/>
+
+
+<text
+x="300"
+y="55"
+text-anchor="middle"
+font-size="20"
+font-weight="bold"
+fill="#15945f">
+
+② 端面～端面
+
+</text>
+
+</svg>
+
+</div>
+
+
+<!-- フランジ端面 -->
+
+<div class="box" style="margin-top:12px">
+
+<h3 style="color:#dd8615">
+
+③ フランジ外周端面 ～ 穴端面
+
+</h3>
+
+<svg
+id="radial"
+viewBox="0 0 600 190">
+</svg>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+<!-- 計算式 -->
+
+<div class="card">
+
+<div class="title">
+⑤ 計算式
+</div>
+
+<div class="pad formulas" id="formulas">
+---
+</div>
+
+</div>
+
 
 </main>
 
+
 <script>
 
-function calculate() {
+const $ = id => document.getElementById(id);
 
-const D = Number(document.getElementById("outer").value);
-const P = Number(document.getElementById("pcd").value);
-const N = Number(document.getElementById("count").value);
-const d = Number(document.getElementById("hole").value);
+const fmt = x =>
+Number.isFinite(x)
+? x.toFixed(3)
+: "---";
 
-const error = document.getElementById("error");
-const results = document.getElementById("results");
 
-error.textContent = "";
-results.style.display = "none";
+function calculate(){
 
-if (!D || !P || !N || !d || D <= 0 || P <= 0 || N < 2 || d <= 0) {
-error.textContent = "すべての項目を正しく入力してください。";
+const FD = +$("fd").value;
+
+const P = +$("pcd").value;
+
+const N = +$("n").value;
+
+const D = +$("d").value;
+
+
+if(!(FD>0 && P>0 && N>=2 && D>=0)){
+
+alert("数値を正しく入力してください。");
+
 return;
-}
-
-if (P > D) {
-error.textContent = "PCDはフランジ外径以下にしてください。";
-return;
-}
-
-const center = P * Math.sin(Math.PI / N);
-
-const edge = center - d;
-
-const outerEdge = (D - P - d) / 2;
-
-if (edge < 0) {
-error.textContent = "穴同士が重なっています。寸法を確認してください。";
-return;
-}
-
-if (outerEdge < 0) {
-error.textContent = "穴がフランジ外周からはみ出します。寸法を確認してください。";
-return;
-}
-
-document.getElementById("center").innerHTML =
-center.toFixed(2) + " mm";
-
-document.getElementById("edge").innerHTML =
-edge.toFixed(2) + " mm";
-
-document.getElementById("outerEdge").innerHTML =
-outerEdge.toFixed(2) + " mm";
-
-results.style.display = "block";
 
 }
+
+
+/* 穴と穴の中心角 */
+
+const deg = 360 / N;
+
+
+/* 隣接穴中心間距離 */
+
+const center =
+P * Math.sin(Math.PI / N);
+
+
+/* 穴端面～端面 */
+
+const edgeDistance =
+center - D;
+
+
+/* フランジ端面～穴端面 */
+
+const outerHole =
+(FD - P - D) / 2;
+
+
+/* フランジ端面～穴中心 */
+
+const outerCenter =
+(FD - P) / 2;
+
+
+/* 結果表示 */
+
+$("r1").textContent =
+fmt(center) + " mm";
+
+$("r2").textContent =
+fmt(edgeDistance) + " mm";
+
+$("r3").textContent =
+fmt(outerHole) + " mm";
+
+$("r4").textContent =
+fmt(outerCenter) + " mm";
+
+
+$("f1").textContent =
+`PCD × sin(180° ÷ ${N})`;
+
+$("f2").textContent =
+`① − 穴径 = ${fmt(center)} − ${D}`;
+
+$("f3").textContent =
+`(外径 − PCD − 穴径) ÷ 2`;
+
+$("f4").textContent =
+`(外径 − PCD) ÷ 2`;
+
+
+$("formulas").innerHTML =
+
+`① 中心間距離 =
+${P} × sin(180° ÷ ${N})
+= <b>${fmt(center)} mm</b><br>`
+
++
+
+`② 端面～端面 =
+${fmt(center)} − ${D}
+= <b>${fmt(edgeDistance)} mm</b><br>`
+
++
+
+`③ フランジ端面～穴端面 =
+(${FD} − ${P} − ${D}) ÷ 2
+= <b>${fmt(outerHole)} mm</b><br>`
+
++
+
+`④ フランジ端面～穴中心 =
+(${FD} − ${P}) ÷ 2
+= <b>${fmt(outerCenter)} mm</b><br>`
+
++
+
+`中心角 =
+360° ÷ ${N}
+= <b>${deg.toFixed(3)}°</b>`;
+
+
+drawTop(FD,P,N,D);
+
+drawRadial(
+FD,
+P,
+D,
+outerHole,
+outerCenter
+);
+
+}
+
+
+/* フランジ平面図 */
+
+function drawTop(FD,P,N,D){
+
+const c = 300;
+
+const R = 225;
+
+const pr = R * (P / FD);
+
+const hr =
+Math.max(
+12,
+R * (D / FD) / 2
+);
+
+
+let s = `
+
+<defs>
+
+<marker
+id="arrBlue"
+markerWidth="10"
+markerHeight="10"
+refX="5"
+refY="5"
+orient="auto">
+
+<path
+d="M0,0 L10,5 L0,10 Z"
+fill="#1769d1"/>
+
+</marker>
+
+
+<marker
+id="arrGreen"
+markerWidth="10"
+markerHeight="10"
+refX="5"
+refY="5"
+orient="auto">
+
+<path
+d="M0,0 L10,5 L0,10 Z"
+fill="#15945f"/>
+
+</marker>
+
+</defs>
+
+`;
+
+
+/* フランジ外周 */
+
+s += `
+
+<circle
+cx="${c}"
+cy="${c}"
+r="${R}"
+fill="#fbfcfe"
+stroke="#333"
+stroke-width="3"/>
+
+`;
+
+
+/* PCD */
+
+s += `
+
+<circle
+cx="${c}"
+cy="${c}"
+r="${pr}"
+fill="none"
+stroke="#ef5555"
+stroke-width="2.5"
+stroke-dasharray="9 7"/>
+
+`;
+
+
+let pts = [];
+
+
+/* 穴を等配 */
+
+for(let i=0;i<N;i++){
+
+let a =
+-Math.PI/2 +
+i * 2*Math.PI/N;
+
+let x =
+c + pr*Math.cos(a);
+
+let y =
+c + pr*Math.sin(a);
+
+pts.push([x,y]);
+
+
+s += `
+
+<circle
+cx="${x}"
+cy="${y}"
+r="${hr}"
+fill="#fff"
+stroke="#222"
+stroke-width="2.5"/>
+
+`;
+
+
+s += `
+
+<text
+x="${x}"
+y="${y-hr-10}"
+text-anchor="middle"
+font-size="16"
+fill="#17448b">
+
+${i+1}
+
+</text>
+
+`;
+
+}
+
+
+s += `
+
+<circle
+cx="${c}"
+cy="${c}"
+r="4"
+fill="#222"/>
+
+`;
+
+
+s += `
+
+<text
+x="${c}"
+y="34"
+text-anchor="middle"
+font-size="20"
+font-weight="bold"
+fill="#17448b">
+
+${N}穴等配
+
+</text>
+
+`;
+
+
+s += `
+
+<text
+x="${c}"
+y="575"
+text-anchor="middle"
+font-size="17"
+fill="#333">
+
+外径 ${FD} mm　
+PCD ${P} mm　
+穴径 ${D} mm
+
+</text>
+
+`;
+
+
+/* 隣接穴 */
+
+if(N>=2){
+
+const a = pts[0];
+
+const b = pts[1];
+
+
+/* ① 中心間 */
+
+s += `
+
+<line
+x1="${a[0]}"
+y1="${a[1]}"
+x2="${b[0]}"
+y2="${b[1]}"
+stroke="#1769d1"
+stroke-width="5"
+marker-start="url(#arrBlue)"
+marker-end="url(#arrBlue)"/>
+
+`;
+
+
+/* ② 端面～端面 */
+
+const mx =
+(a[0]+b[0])/2;
+
+const my =
+(a[1]+b[1])/2;
+
+const dx =
+b[0]-a[0];
+
+const dy =
+b[1]-a[1];
+
+const L =
+Math.hypot(dx,dy);
+
+const nx =
+-dy/L*15;
+
+const ny =
+dx/L*15;
+
+
+s += `
+
+<line
+x1="${a[0]+dx/L*hr+nx}"
+y1="${a[1]+dy/L*hr+ny}"
+x2="${b[0]-dx/L*hr+nx}"
+y2="${b[1]-dy/L*hr+ny}"
+stroke="#15945f"
+stroke-width="4"
+marker-start="url(#arrGreen)"
+marker-end="url(#arrGreen)"/>
+
+`;
+
+
+s += `
+
+<text
+x="${mx}"
+y="${my-22}"
+text-anchor="middle"
+font-size="15"
+font-weight="bold"
+fill="#1769d1">
+
+①中心間
+
+</text>
+
+`;
+
+
+s += `
+
+<text
+x="${mx}"
+y="${my+42}"
+text-anchor="middle"
+font-size="15"
+font-weight="bold"
+fill="#15945f">
+
+②端面～端面
+
+</text>
+
+`;
+
+}
+
+
+/* PCD線 */
+
+s += `
+
+<line
+x1="${c}"
+y1="${c}"
+x2="${pts[0][0]}"
+y2="${pts[0][1]}"
+stroke="#888"
+stroke-dasharray="6 5"/>
+
+`;
+
+
+s += `
+
+<text
+x="${c+25}"
+y="${c-55}"
+font-size="16"
+fill="#ef5555">
+
+PCD
+
+</text>
+
+`;
+
+
+$("top").innerHTML = s;
+
+}
+
+
+/* フランジ端面～穴 */
+
+function drawRadial(
+FD,
+P,
+D,
+edge,
+centerDist
+){
+
+const left = 55;
+
+const flangeW = 65;
+
+const holeC = 410;
+
+const holeR = 35;
+
+const y = 95;
+
+
+$("radial").innerHTML = `
+
+<defs>
+
+<marker
+id="arrO"
+markerWidth="9"
+markerHeight="9"
+refX="4.5"
+refY="4.5"
+orient="auto">
+
+<path
+d="M0,0L9,4.5L0,9Z"
+fill="#dd8615"/>
+
+</marker>
+
+
+<marker
+id="arrP"
+markerWidth="9"
+markerHeight="9"
+refX="4.5"
+refY="4.5"
+orient="auto">
+
+<path
+d="M0,0L9,4.5L0,9Z"
+fill="#7250c5"/>
+
+</marker>
+
+</defs>
+
+
+<rect
+x="${left}"
+y="25"
+width="${flangeW}"
+height="140"
+fill="#e3e8ee"
+stroke="#222"
+stroke-width="3"/>
+
+
+<circle
+cx="${holeC}"
+cy="${y}"
+r="${holeR}"
+fill="#fff"
+stroke="#222"
+stroke-width="3"/>
+
+
+<line
+x1="${holeC}"
+y1="48"
+x2="${holeC}"
+y2="142"
+stroke="#777"
+stroke-dasharray="5 5"/>
+
+
+<!-- ③ 穴端面 -->
+
+<line
+x1="${left+flangeW}"
+y1="62"
+x2="${holeC-holeR}"
+y2="62"
+stroke="#dd8615"
+stroke-width="4"
+marker-start="url(#arrO)"
+marker-end="url(#arrO)"/>
+
+
+<text
+x="${(left+flangeW+holeC-holeR)/2}"
+y="48"
+text-anchor="middle"
+font-size="14"
+font-weight="bold"
+fill="#dd8615">
+
+③ 穴端面まで ${fmt(edge)} mm
+
+</text>
+
+
+<!-- ④ 穴中心 -->
+
+<line
+x1="${left+flangeW}"
+y1="145"
+x2="${holeC}"
+y2="145"
+stroke="#7250c5"
+stroke-width="4"
+marker-start="url(#arrP)"
+marker-end="url(#arrP)"/>
+
+
+<text
+x="${(left+flangeW+holeC)/2}"
+y="182"
+text-anchor="middle"
+font-size="14"
+font-weight="bold"
+fill="#7250c5">
+
+④ 穴中心まで ${fmt(centerDist)} mm
+
+</text>
+
+
+<text
+x="${left+flangeW/2}"
+y="18"
+text-anchor="middle"
+font-size="12">
+
+フランジ端面
+
+</text>
+
+`;
+
+}
+
+
+/* 計算ボタン */
+
+$("calc").addEventListener(
+"click",
+calculate
+);
+
+
+/* 初期計算 */
+
+calculate();
 
 </script>
 
